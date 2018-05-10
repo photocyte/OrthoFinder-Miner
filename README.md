@@ -8,15 +8,15 @@ This is a comparative genomic software tool designed to take the output from [Or
 
 Run this OrthoFinder analysis on your own computer / cluster.
 
-It is recommended that you filter the FASTA record descriptions away from the Transdecoder produced FASTSA file.  [Seqkit](https://github.com/shenwei356/seqkit) can accomplish this:
+For ease of readability, it is recommended that you filter the FASTA record descriptions away from the Transdecoder produced FASTSA file.  [Seqkit](https://github.com/shenwei356/seqkit) can accomplish this:
 
 ```seqkit replace -p " .+" -r "" INPUT.fa > OUTPUT.fa```
 
 ## Criteria to filter by
 
-* 1. Sequence similarity/homology to a provided gene via being in the same Orthogroup **Implemented**
+* 1. Sequence similarity/homology to a provided gene via being in the same Orthogroup **(Now implemented)**
 * 2. Greatly higher or lower expression in a given species versus another.
-* 3. Not a conserved gene (aka, not in a "1-1-1" orthogroup). Also known as a "Reciprocally direct orthogroup" or RDOG **Implemented**
+* 3. Not a conserved gene (aka, not in a "1-1-1" orthogroup). Also known as a "Reciprocally direct orthogroup" or RDOG **(Now implemented)**
 * 4. Genes with a similar expression pattern to a target gene / gene expression similarity clustering.
 
 ## Program goals

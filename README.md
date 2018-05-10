@@ -10,7 +10,7 @@ Run this OrthoFinder analysis on your own computer / cluster.
 
 It is recommended that you filter the FASTA record descriptions away from the Transdecoder produced FASTSA file.  [Seqkit](https://github.com/shenwei356/seqkit) can accomplish this:
 
-```seqkit grep -p " .+" -r "" INPUT.fa > OUTPUT.fa```
+```seqkit replace -p " .+" -r "" INPUT.fa > OUTPUT.fa```
 
 ## Criteria to filter by
 

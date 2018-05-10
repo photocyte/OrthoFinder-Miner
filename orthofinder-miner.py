@@ -1,9 +1,13 @@
 import Bio
 import argparse
 import glob
+import sys
 
 parser = argparse.ArgumentParser(description='Proof of concept script for comparative genomics with OrthoFinder')
 parser.add_argument('--orthofinder_output', required=True, nargs=1,metavar="DIR",help="OrthoFinder output directory")
+parser.add_argument('--similarity_list', required=False, nargs=1,metavar="TEXTFILE",help="Textfile with protein IDs where the OGs should be fetched")
+parser.add_argument('--primary_expression_file', required=False, nargs=1,metavar="TEXTFILE",help="Textfile with expression values from the primary species")
+parser.add_argument('--secondary_expression_file', required=False, nargs=1,metavar="TEXTFILE",help="Textfile with expression values from the secondary species")
 
 args = parser.parse_args()
 
@@ -47,7 +51,7 @@ class Orthogroup:
             the_genes += self.get_gene_ids_via_species_index(i)
         return the_genes        
 
-    def is_reciprocally_direct_orthogroup(self):
+    def is_reciprocally_direct(self):
          for i in range(0,len(self.per_species_gene_ids)):
             if len(self.get_gene_ids_via_species_index(i)) != 1:
                 return False
@@ -69,7 +73,7 @@ with open(path) as f:
 
 for i in range(0,len(species)):
     species[i] = species[i].split(" ")[1]
-print("Loaded",len(species),"species from OrthoFinder results")
+sys.stderr.write("Loaded "+str(len(species))+" species from OrthoFinder results\n")
 
 ##Load sequence IDs
 sequence_name_to_species_dict = dict()
@@ -89,20 +93,29 @@ for i in range(0,len(sequence_ids)):
         species_to_sequences[s] = [sequence_name]
     else:
         species_to_sequences[s].append(sequence_name)
-print("done")
 
 ##Finding the Orthologues folder
 Orthologues_dir_path = glob.glob(args.orthofinder_output[0]+"WorkingDirectory/Orthologues_*")
 if len(Orthologues_dir_path) == 0:
-    print("No Orthologues folder found. Are you sure you ran OrthoFinder completely?")
+    sys.stderr.write("No Orthologues folder found. Are you sure you ran OrthoFinder completely?\n")
 elif len(Orthologues_dir_path) > 1:
-    print("Multiple Orthologues folder found. Only one can be used. Exiting.")
+    sys.stderr.write("Multiple Orthologues folders were found. Only one can be used. Exiting.\n")
     exit()
+
+##Loading the protein similarity list
+##If you are in an orthogroup with one of these members the criteria is passed
+path = args.similarity_list[0]
+similarity_list = []
+with open(path) as f:
+    similarity_list = f.read().splitlines()
+for i in range(0,len(similarity_list)):
+    similarity_list[i] = similarity_list[i].strip()
+sys.stderr.write("Loaded "+str(len(similarity_list))+" protein ids to evaluate similarity from\n")
 
 ####Load the Orthogroups.csv file into a datastructure
 ####Structure of the Orthogroups.csv file:
 ####Different species separated by tabs, genes within a given species separated by commas
-print("Starting to load the Orthogroups.csv file...")
+sys.stderr.write("Starting to load the Orthogroups.csv file...\n")
 orthogroups = dict()
 path = args.orthofinder_output[0]+"WorkingDirectory/Orthogroups.csv"
 handle = open(path,"rU")
@@ -116,8 +129,27 @@ for line in handle.readlines():
     ##print(og)
     i+=1
 
-print("Loaded",len(orthogroups),"orthogroups from the Orthogroups.csv file.")
-print("OG0014256",orthogroups["OG0014256"].is_reciprocally_direct_orthogroup())
-print("OG0000001",orthogroups["OG0000001"].is_reciprocally_direct_orthogroup())
+sys.stderr.write("Loaded "+str(len(orthogroups))+" orthogroups from the Orthogroups.csv file.\n")
 
-##Finding 1-1-1 orthogroups
+##Reciprocally direct orthogroups. RDOGs.txt
+##sys.stderr.write("Now printing all reciprocally direct orthogroups...\n")
+for key in orthogroups:
+    if orthogroups[key].is_reciprocally_direct():
+        ##sys.stdout.write(orthogroups[key].name+"\n")
+        pass
+
+##Protein membership of orthogroup
+sys.stderr.write("Now evaluating orthogroup protein similarity membership...\n")
+for key in orthogroups:
+    for protein in similarity_list:
+        if protein in orthogroups[key].get_all_gene_ids():
+            sys.stdout.write(orthogroups[key].name+"\n")
+            pass
+
+##Comparative genomics higher expression criteria
+primary_species=species[1] ##In this case, Galega officinalis 
+secondary_species=species[0] ##In this case, Galega orientalis
+sys.stderr.write("Primary species for expression comparison is:"+primary_species+"\n")
+sys.stderr.write("Secondary species for expression comparison is:"+secondary_species+"\n")
+sys.stderr.write("(Not yet implemented)\n")
+

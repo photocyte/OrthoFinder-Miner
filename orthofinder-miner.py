@@ -7,8 +7,27 @@ parser.add_argument('--orthofinder_output', required=True, nargs=1,metavar="DIR"
 args = parser.parse_args()
 
 ##Load species.
-species = list(open(args.orthofinder_output+"WorkingDirectory/SpeciesIDs.txt","rU").readlines())
+path = args.orthofinder_output[0]+"WorkingDirectory/SpeciesIDs.txt"
+species = []
+with open(path) as f:
+    species = f.read().splitlines()
+
+for i in range(0,len(species)):
+    species[i] = species[i].split(" ")[1]
 print(species)
+
+##Load sequence IDs
+path = args.orthofinder_output[0]+"WorkingDirectory/SequenceIDs.txt"
+sequence_ids = []
+with open(path) as f:
+    sequence_ids = f.read().splitlines()
+for i in range(0,len(sequence_ids)):
+    splitline = sequence_ids[i].split("_")
+    species_index = splitline[0]
+    sequence_index = splitline[1].split(":")[0]
+    sequence_name = ":".join("_".join(splitline[1:]).split(":")[1:]).strip()
+    print(species_index,sequence_index,sequence_name)
+exit()
 
 ####Load the Orthogroups file into a datastructure
 print("Starting to load the Orthogroups.csv file...")

@@ -7,9 +7,9 @@ This is a software tool designed to take the output from [OrthoFinder](https://g
 * 1. Sequence similarity/homology to a provided gene
 * 2. Greatly higher or lower expression in a given species versus another.
 * 3. Not a conserved gene (aka, not in a "1-1-1" orthogroup)
-* 4. Genes with a similar 
+* 4. Genes with a similar expression pattern to a target gene / gene expression similarity clustering.
 
 ## Goals
-
+* Parsing of Orthofinder results (Orthogroups.csv)
 * Parsing of RSEM expression analysis results
 * Parsing of Kallisto expression analysis results

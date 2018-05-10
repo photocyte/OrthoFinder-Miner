@@ -2,9 +2,13 @@ import Bio
 import argparse
 
 parser = argparse.ArgumentParser(description='Proof of concept script for comparative genomics with OrthoFinder')
-parser.add_argument('--orthofinder_output', required=True, nargs=1,metavar="FILE",help="OrthoFinder orthogroups.csv file")
+parser.add_argument('--orthofinder_output', required=True, nargs=1,metavar="DIR",help="OrthoFinder output directory")
 
 args = parser.parse_args()
+
+##Load species.
+species = list(open(args.orthofinder_output+"WorkingDirectory/SpeciesIDs.txt","rU").readlines())
+print(species)
 
 ####Load the Orthogroups file into a datastructure
 print("Starting to load the Orthogroups.csv file...")

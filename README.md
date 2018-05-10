@@ -20,6 +20,6 @@ It is recommended that you filter the FASTA record descriptions away from the Tr
 * 4. Genes with a similar expression pattern to a target gene / gene expression similarity clustering.
 
 ## Program goals
-* Parsing of Orthofinder results (Orthogroups.csv)
+* Parsing of Orthofinder results & metadata (Orthogroups.csv, SpeciesIDs.txt, SequenceIDs.txt)
 * Parsing of RSEM expression analysis results
 * Parsing of Kallisto expression analysis results

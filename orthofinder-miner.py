@@ -14,13 +14,13 @@ class Orthogroup:
         
         self.species = species ##Have to store the species in relation to the orthogroup, as the orthogroup is only informative with respect to species it was calculated against.
         ##Yes it isn't very memory efficient, but oh well
-        ##Alternative could implement an "Orthogroup holder" class which keeps track of the species
+        ##Alternatively could implement an "Orthogroup holder" class which keeps track of the species
 
         ##Implement a list of lists to hold the per species genes.
         ##Index of first list is the species
         ##Index of second list is the gene
         self.per_species_gene_ids = []
-        per_line_gene_ids = tab_split[1:]
+        per_line_gene_ids = tab_split[1:].strip() ##strip removes the newline at the end of the line
         
         for k in range(0,len(per_line_gene_ids)):
             genes = per_line_gene_ids[k].split(",")
@@ -61,6 +61,7 @@ class Orthogroup:
 
 ##Load species.
 ##Can also get this from the header of the Orthogroups.csv file
+##Note that the species ID within OrthoFinder has the .fasta or .fa removed
 path = args.orthofinder_output[0]+"WorkingDirectory/SpeciesIDs.txt"
 species = []
 with open(path) as f:

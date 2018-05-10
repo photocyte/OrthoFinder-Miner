@@ -1,12 +1,16 @@
 # OrthoFinder Miner
 
-This is a software tool designed to take the output from [OrthoFinder](https://github.com/davidemms/OrthoFinder) and different expression analysis programs, apply different criteria, and then produce an final filtered list of genes for experimental follow up (e.g. cDNA cloning and recombinant expression).
+This is a comparative genomic software tool designed to take the output from [OrthoFinder](https://github.com/davidemms/OrthoFinder) and different expression analysis programs (e.g. [RSEM](https://deweylab.github.io/RSEM/) or [Kallisto](https://pachterlab.github.io/kallisto/)), apply different criteria, and then produce an final filtered list of genes for experimental follow up (e.g. by cDNA cloning and recombinant expression).
 
 ## OrthoFinder run expectations 
-* For known/reference species: Input the peptide FASTA file of the [Uniprot proteomes](https://www.uniprot.org/help/proteome) into OrthoFinder. E.g. the [Arabidopsis thaliana](https://www.uniprot.org/proteomes/UP000006548) Uniprot proteome.
+* For known/reference species: Input the peptide FASTA file of the [Uniprot proteomes](https://www.uniprot.org/help/proteome) into OrthoFinder. E.g. the [*Arabidopsis thaliana*](https://www.uniprot.org/proteomes/UP000006548) Uniprot proteome.
 * For unpublished species: Input the peptide FASTA file(s) produced from an [Transdecoder](https://github.com/TransDecoder/TransDecoder/wiki)(v5.2.0+) *in silico* translated *de novo* transcriptome into OrthoFinder.
 
 Run this OrthoFinder analysis on your own computer / cluster.
+
+It is recommended that you filter the FASTA record descriptions away from the Transdecoder produced FASTSA file.  [Seqkit](https://github.com/shenwei356/seqkit) can accomplish this:
+
+```seqkit grep -p " .+" -r "" INPUT.fa > OUTPUT.fa```
 
 ## Criteria to filter by
 

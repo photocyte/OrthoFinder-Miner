@@ -20,7 +20,7 @@ class Orthogroup:
         ##Index of first list is the species
         ##Index of second list is the gene
         self.per_species_gene_ids = []
-        per_line_gene_ids = tab_split[1:].strip() ##strip removes the newline at the end of the line
+        per_line_gene_ids = tab_split[1:]
         
         for k in range(0,len(per_line_gene_ids)):
             genes = per_line_gene_ids[k].split(",")

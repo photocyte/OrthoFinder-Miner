@@ -25,7 +25,7 @@ class Orthogroup:
         tab_split = line.split('\t')
         orthogroup = tab_split[0].strip()
         self.genetree = None
-        self.msa = None
+        self.pep_msa = None
 
         self.species = species ##Have to store the species in relation to the orthogroup, as the orthogroup is only informative with respect to species it was calculated against.
         ##Yes it isn't very memory efficient, but oh well
@@ -65,8 +65,8 @@ class Orthogroup:
     def set_genetree(self,theTree):
         self.genetree = theTree
 
-    def set_msa(self,theMSA):
-        self.msa = theMSA
+    def set_pep_msa(self,theMSA):
+        self.pep_msa = theMSA
 
     def is_reciprocally_direct(self):
          for i in range(0,len(self.per_species_gene_ids)):
@@ -180,7 +180,7 @@ if skip_pep_msa != True:
         path = args.orthofinder_output[0]+"WorkingDirectory/Orthologues_"+results_date+"/Alignments/"+og+".fa"
         msa = Bio.SeqIO.to_dict(Bio.SeqIO.parse(path,"fasta"))
         j += len(msa)
-        orthogroups[og].set_msa(msa)
+        orthogroups[og].set_pep_msa(msa)
         i+=1
         if i % 1000 == 0:
             sys.stderr.write("Completed "+str(i)+"...\n")
@@ -211,6 +211,8 @@ sys.stderr.write("Primary species for expression comparison is:"+primary_species
 sys.stderr.write("Secondary species for expression comparison is:"+secondary_species+"\n")
 sys.stderr.write("(Not yet implemented)\n")
 
+
+###Fetching CDS for given orthogroup
 print(orthogroups["OG0000054"])
 for gene in orthogroups["OG0000054"].get_all_gene_ids():
     print(gene)

@@ -1,21 +1,32 @@
 import Bio
+import Bio.SeqIO
 import argparse
 import glob
 import sys
+import re
+import os
+import os.path
+import ete3
 
 parser = argparse.ArgumentParser(description='Proof of concept script for comparative genomics with OrthoFinder')
 parser.add_argument('--orthofinder_output', required=True, nargs=1,metavar="DIR",help="OrthoFinder output directory")
-parser.add_argument('--similarity_list', required=False, nargs=1,metavar="TEXTFILE",help="Textfile with protein IDs where the OGs should be fetched")
+parser.add_argument('--similarity_list', required=False, nargs=1,metavar="TEXTFILE",help="Textfile with protein IDs where the OGs should be fetched",default=None)
 parser.add_argument('--primary_expression_file', required=False, nargs=1,metavar="TEXTFILE",help="Textfile with expression values from the primary species")
 parser.add_argument('--secondary_expression_file', required=False, nargs=1,metavar="TEXTFILE",help="Textfile with expression values from the secondary species")
+parser.add_argument('--CDS_directory', required=False, nargs=1,metavar="TEXTFILE",help="Textfile with expression values from the secondary species")
 
 args = parser.parse_args()
+
+##Check pythex.org to see how the groups work
+uniprot_fasta_header_re = re.compile("(tr|sp)\|([OPQ][0-9][A-Z0-9]{3}[0-9]|[A-NR-Z][0-9]([A-Z][A-Z0-9]{2}[0-9]){1,2})\|([OPQ][0-9][A-Z0-9]{3}[0-9]|[A-NR-Z][0-9]([A-Z][A-Z0-9]{2}[0-9]){1,2})_([0-9a-zA-Z_]+)")
 
 class Orthogroup:
     def __init__(self,line,species):
         tab_split = line.split('\t')
         orthogroup = tab_split[0].strip()
-        
+        self.genetree = None
+        self.msa = None
+
         self.species = species ##Have to store the species in relation to the orthogroup, as the orthogroup is only informative with respect to species it was calculated against.
         ##Yes it isn't very memory efficient, but oh well
         ##Alternatively could implement an "Orthogroup holder" class which keeps track of the species
@@ -51,6 +62,12 @@ class Orthogroup:
             the_genes += self.get_gene_ids_via_species_index(i)
         return the_genes        
 
+    def set_genetree(self,theTree):
+        self.genetree = theTree
+
+    def set_msa(self,theMSA):
+        self.msa = theMSA
+
     def is_reciprocally_direct(self):
          for i in range(0,len(self.per_species_gene_ids)):
             if len(self.get_gene_ids_via_species_index(i)) != 1:
@@ -62,6 +79,9 @@ class Orthogroup:
 
     def __print__(self):
         return {self.name:self.get_all_gene_ids}
+
+##Parse results_date
+results_date = re.search("Results_([0-9a-zA-Z_]+)",args.orthofinder_output[0]).group(1)
 
 ##Load species.
 ##Can also get this from the header of the Orthogroups.csv file
@@ -87,7 +107,7 @@ for i in range(0,len(sequence_ids)):
     species_index = int(splitline[0])
     s = species[species_index]
     sequence_index = int(splitline[1].split(":")[0])
-    sequence_name = ":".join("_".join(splitline[1:]).split(":")[1:]).strip()
+    sequence_name = ":".join("_".join(splitline[1:]).split(":")[1:]).strip() ##Text parsing wizardry
     sequence_name_to_species_dict[sequence_name] = s
     if s not in species_to_sequences.keys():
         species_to_sequences[s] = [sequence_name]
@@ -104,13 +124,14 @@ elif len(Orthologues_dir_path) > 1:
 
 ##Loading the protein similarity list
 ##If you are in an orthogroup with one of these members the criteria is passed
-path = args.similarity_list[0]
-similarity_list = []
-with open(path) as f:
-    similarity_list = f.read().splitlines()
-for i in range(0,len(similarity_list)):
-    similarity_list[i] = similarity_list[i].strip()
-sys.stderr.write("Loaded "+str(len(similarity_list))+" protein ids to evaluate similarity from\n")
+if args.similarity_list != None:
+    path = args.similarity_list[0]
+    similarity_list = []
+    with open(path) as f:
+        similarity_list = f.read().splitlines()
+    for i in range(0,len(similarity_list)):
+        similarity_list[i] = similarity_list[i].strip()
+    sys.stderr.write("Loaded "+str(len(similarity_list))+" protein ids to evaluate similarity from\n")
 
 ####Load the Orthogroups.csv file into a datastructure
 ####Structure of the Orthogroups.csv file:
@@ -128,23 +149,60 @@ for line in handle.readlines():
     orthogroups[og.name] = og
     ##print(og)
     i+=1
-
 sys.stderr.write("Loaded "+str(len(orthogroups))+" orthogroups from the Orthogroups.csv file.\n")
 
+####Load the GeneTrees into the datastructure
+####Ideally should handle this elsewhere, such as within the Orthogroup init or shortly after.
+skip_gene_trees = True
+if skip_gene_trees != True:
+    i=0
+    sys.stderr.write("Starting to load the gene trees...\n")
+    path = args.orthofinder_output[0]+"WorkingDirectory/Orthologues_"+results_date+"/Gene_Trees/*_tree.txt"
+    print(path)
+    files = glob.glob(path)
+    for f in files:
+        OG_name = re.sub("_tree.txt$","",os.path.basename(f))
+        t = ete3.Tree(f, format=1)
+        orthogroups[OG_name].set_genetree(t)
+        i+=1
+        if i % 100 == 0:
+            sys.stderr.write("Completed "+str(i)+"...\n")
+    sys.stderr.write("Loaded "+str(i)+" genetrees from the Gene_Trees directory.\n")
+
+####Load the Alignments into the datastructure
+####Ideally should handle this elsewhere, such as within the Orthogroup init or shortly after.
+skip_pep_msa = True
+if skip_pep_msa != True:
+    i=0
+    j=0
+    sys.stderr.write("Starting to load the peptide FASTA MSAs...\n")
+    for og in orthogroups.keys():
+        path = args.orthofinder_output[0]+"WorkingDirectory/Orthologues_"+results_date+"/Alignments/"+og+".fa"
+        msa = Bio.SeqIO.to_dict(Bio.SeqIO.parse(path,"fasta"))
+        j += len(msa)
+        orthogroups[og].set_msa(msa)
+        i+=1
+        if i % 1000 == 0:
+            sys.stderr.write("Completed "+str(i)+"...\n")
+    sys.stderr.write("Loaded "+str(i)+" peptide MSAs containing "+str(j)+" total peptides from the Alignment directory.\n")
+
 ##Reciprocally direct orthogroups. RDOGs.txt
-##sys.stderr.write("Now printing all reciprocally direct orthogroups...\n")
+sys.stderr.write("Now printing all reciprocally direct orthogroups to RDOGs.txt...\n")
+write_handle = open("RDOGs.txt","w")
 for key in orthogroups:
     if orthogroups[key].is_reciprocally_direct():
-        ##sys.stdout.write(orthogroups[key].name+"\n")
+        write_handle.write(orthogroups[key].name+"\n")
         pass
+write_handle.close()
 
 ##Protein membership of orthogroup
-sys.stderr.write("Now evaluating orthogroup protein similarity membership...\n")
-for key in orthogroups:
-    for protein in similarity_list:
-        if protein in orthogroups[key].get_all_gene_ids():
-            sys.stdout.write(orthogroups[key].name+"\n")
-            pass
+if args.similarity_list != None:
+    sys.stderr.write("Now evaluating orthogroup protein similarity membership...\n")
+    for key in orthogroups:
+        for protein in similarity_list:
+            if protein in orthogroups[key].get_all_gene_ids():
+                sys.stdout.write(orthogroups[key].name+"\n")
+                pass
 
 ##Comparative genomics higher expression criteria
 primary_species=species[1] ##In this case, Galega officinalis 
@@ -153,3 +211,13 @@ sys.stderr.write("Primary species for expression comparison is:"+primary_species
 sys.stderr.write("Secondary species for expression comparison is:"+secondary_species+"\n")
 sys.stderr.write("(Not yet implemented)\n")
 
+print(orthogroups["OG0000054"])
+for gene in orthogroups["OG0000054"].get_all_gene_ids():
+    print(gene)
+    re_result = uniprot_fasta_header_re.search(gene)
+    if re_result != None:
+       ##Is a uniprot record
+       print re_result.group(2)  ##Unique uniprot id
+    if re_result == None:
+       ##Does not conform to Uniprot naming
+       pass

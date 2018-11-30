@@ -7,18 +7,20 @@ import re
 import os
 import os.path
 import ete3
+##import Uniprot_fetch_CDS ##Disabled until Python3 has ete3
 
 parser = argparse.ArgumentParser(description='Proof of concept script for comparative genomics with OrthoFinder')
 parser.add_argument('--orthofinder_output', required=True, nargs=1,metavar="DIR",help="OrthoFinder output directory")
 parser.add_argument('--similarity_list', required=False, nargs=1,metavar="TEXTFILE",help="Textfile with protein IDs where the OGs should be fetched",default=None)
 parser.add_argument('--primary_expression_file', required=False, nargs=1,metavar="TEXTFILE",help="Textfile with expression values from the primary species")
 parser.add_argument('--secondary_expression_file', required=False, nargs=1,metavar="TEXTFILE",help="Textfile with expression values from the secondary species")
-parser.add_argument('--CDS_directory', required=False, nargs=1,metavar="TEXTFILE",help="Textfile with expression values from the secondary species")
+parser.add_argument('--CDS_directory', required=False, nargs=1,metavar="DIR",help="Directory with CDS FASTA files with FASTA IDs identical to the peptides",default=None)
+parser.add_argument('--target_OG', required=False, nargs=1,metavar="OG_NUMBER",help="Orthogroup number, e.g. 'OG0000054'",default=None)
 
 args = parser.parse_args()
 
 ##Check pythex.org to see how the groups work
-uniprot_fasta_header_re = re.compile("(tr|sp)\|([OPQ][0-9][A-Z0-9]{3}[0-9]|[A-NR-Z][0-9]([A-Z][A-Z0-9]{2}[0-9]){1,2})\|([OPQ][0-9][A-Z0-9]{3}[0-9]|[A-NR-Z][0-9]([A-Z][A-Z0-9]{2}[0-9]){1,2})_([0-9a-zA-Z_]+)")
+uniprot_fasta_header_re = re.compile("(tr|sp)\|([OPQ][0-9][A-Z0-9]{3}[0-9]|[A-NR-Z][0-9]([A-Z][A-Z0-9]{2}[0-9]){1,2})\|([0-9a-zA-Z_]+)_([0-9a-zA-Z_]+)")
 
 class Orthogroup:
     def __init__(self,line,species):
@@ -211,15 +213,31 @@ sys.stderr.write("Primary species for expression comparison is:"+primary_species
 sys.stderr.write("Secondary species for expression comparison is:"+secondary_species+"\n")
 sys.stderr.write("(Not yet implemented)\n")
 
+if args.CDS_directory != None and args.target_OG != None:
+    write_handle = open("Orthofinder_CDSs.fa","w")
+    sys.stderr.write("Loading all CDS sequences into memory...\n")
+    files = glob.glob(args.CDS_directory[0]+"/*.fa")
+    CDS_dict = dict()
+    for f in files:
+        print(f)
+        CDS_dict.update(Bio.SeqIO.to_dict(Bio.SeqIO.parse(f,"fasta")))
+    sys.stderr.write("Loaded "+str(len(CDS_dict))+" CDS sequences into memory.\n")
 
-###Fetching CDS for given orthogroup
-print(orthogroups["OG0000054"])
-for gene in orthogroups["OG0000054"].get_all_gene_ids():
-    print(gene)
-    re_result = uniprot_fasta_header_re.search(gene)
-    if re_result != None:
-       ##Is a uniprot record
-       print re_result.group(2)  ##Unique uniprot id
-    if re_result == None:
-       ##Does not conform to Uniprot naming
-       pass
+    ###Fetching CDS for given orthogroup
+    uniprot_ID_list = []
+    for gene in orthogroups[args.target_OG[0]].get_all_gene_ids():
+        re_result = uniprot_fasta_header_re.search(gene)
+        if re_result != None:
+            ##Is a uniprot record
+            uniprot_ID_list.append(re_result.group(2))  ##Unique uniprot id
+        if re_result == None:
+            ##Does not conform to Uniprot naming
+            write_handle.write(CDS_dict[gene].format("fasta"))
+   
+    temp_handle = open("uniprot_ids.txt","w")
+    for u in uniprot_ID_list:
+        temp_handle.write(u+"\n")
+        ##FIXME TODO, will have to update this so it can directly call the Uniprot_fetch_CDS script, and will assert that the # of fetched CDSs is correct
+    write_handle.close()
+##fasta = Uniprot_fetch_CDS.Uniprot_fetch_CDS(uniprot_ID_list)
+##print(fasta)
